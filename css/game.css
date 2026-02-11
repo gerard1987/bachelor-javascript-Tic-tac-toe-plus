@@ -1,0 +1,90 @@
+body {
+    margin: 20px;
+    font-family: 'Gill Sans', 'Verdana', sans-serif;
+    font-size: 18px;
+}
+
+button {
+    cursor: pointer;
+}
+
+#settings-menu {
+    display: flex;
+    gap: 40px;
+    margin-bottom: 20px;
+}
+
+#settings-menu > div {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+#settings-menu input[type='range'] {
+    cursor: pointer;
+}
+
+#board {
+    margin-bottom: 20px;
+}
+
+#board div.row {
+    display: flex;
+}
+
+#board div.cell {
+    flex-wrap: wrap;
+    box-sizing: border-box;
+    border: 1px solid grey;
+    width: 64px;
+    height: 64px;
+    background-size: 80%;
+    background-repeat: no-repeat;
+    background-position: center;
+    margin: 5px;
+    aspect-ratio: 1 / 1;
+    cursor: pointer;
+}
+
+#board div.cell.o {
+    background-image: url("data:image/svg+xml,%3Csvg version='1.1' id='Laag_1' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' x='0px' y='0px' viewBox='0 0 500 500' style='enable-background:new 0 0 500 500%3B' xml:space='preserve'%3E%3Cg%3E%3Cpath d='M500 250c0 138.07-111.93 250-250 250S0 388.07 0 250S111.93 0 250 0S500 111.93 500 250z M425 250c0-96.65-78.35-175-175-175S75 153.35 75 250s78.35 175 175 175S425 346.65 425 250z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+#board div.cell.x {
+    background-image: url("data:image/svg+xml,%3Csvg version='1.1' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' x='0px' y='0px' viewBox='0 0 500 500' style='enable-background:new 0 0 500 500%3B' xml:space='preserve'%3E%3Cg%3E%3Cg%3E%3Crect x='212.93' y='-66.15' transform='matrix(0.7071 -0.7071 0.7071 0.7071 -103.421 250.2478)' width='74.88' height='632.23'/%3E%3C/g%3E%3Cg%3E%3Crect x='-65.75' y='212.52' transform='matrix(0.7071 -0.7071 0.7071 0.7071 -103.421 250.2478)' width='632.23' height='74.88'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+#board div.cell.o,
+#board div.cell.x {
+    cursor: default;
+}
+
+#score {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+#score > div {
+    box-sizing: border-box;
+    border: 1px solid grey;
+    background-color: aquamarine;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 10px 20px;
+}
+
+#score > div > img {
+    width: 24px;
+    height: 24px;
+}
+
+#score div#score-x,
+#score div#score-o {
+    width: 200px;
+    font-size: 32px;
+}
+
+
