@@ -10,6 +10,7 @@ class TicTacToe {
     this.boardWidth = this.parseInputValue(this.widthElement.value);
     this.boardHeight = this.parseInputValue(this.heightElement.value);
     this.winCondition = this.parseInputValue(this.winConditionElement.value);
+
     this.players = [];
     this.players.push(new Player('x'));
     this.players.push(new Player('o'));
@@ -62,26 +63,29 @@ class Game {
   constructor(board, players) {
     this.board = board
     this.players = players;
-    this.setCurrentPlayer(
-      this.setStartingPlayer()
-    );
+    this.currentPlayer = this.getStartingPlayer();
+
     console.log(`Initialized game board with ${this.board.rowCount} rows and ${this.board.colCount} cols`);
     console.log(`Current player is ${this.currentPlayer.type}`);
   }
 
   init() {
-    this.board.clear();
     this.board.render();
+    this.setEventListeners();
   }
 
-  setStartingPlayer() {
+  getStartingPlayer() {
     return this.players[Math.floor(Math.random() * this.players.length)];
   }
 
-  setCurrentPlayer(player) {
-    this.currentPlayer = player;
+  setCurrentPlayer() {
+    this.currentPlayer = this.players.find(player => player.type !== this.currentPlayer.type);
+    this.showCurrentPlayer();
+  }
+
+  showCurrentPlayer() {
     let header = document.getElementById('current_player');
-    if (header == null){
+    if (header == null) {
       header = document.createElement('h1');
       header.id = 'current_player';
     }
@@ -91,6 +95,18 @@ class Game {
     const gameEl = this.board.boardElement.parentElement;
     gameEl.appendChild(header);
   }
+
+  setEventListeners(){
+    this.board.rows.forEach((row) => {
+      row.cells.forEach((cell) => {
+        // Add the click listener to the element of the cell
+        cell.element.addEventListener('click', (event) => {
+          cell.setValue(this.currentPlayer.type);
+          this.setCurrentPlayer();
+        })
+      });
+    })
+  }
 }
 
 class Board {
@@ -98,6 +114,8 @@ class Board {
     this.boardElement = boardElement;
     this.rowCount = rowCount;
     this.colCount = colCount;
+    this.rows = [];
+    this.clear();
   }
 
   clear() {
@@ -118,6 +136,7 @@ class Board {
       }
 
       row.generateCells();
+      this.rows.push(row);
     }
   }
 }
@@ -152,25 +171,27 @@ class Cell {
   constructor(row, col) {
     this.row = row;
     this.col = col;
+    this.element = null;
   }
 
   generateHtml() {
     const row = document.getElementById(`row_${this.row}`);
-    const cell = document.createElement("div");
-    cell.classList.add("cell");
-    cell.id = `cell_${this.col}`;
-    cell.dataset.row = this.row;
-    cell.dataset.col = this.col;
-    cell.textContent = "";
-    cell.addEventListener("click", (event) => this.setCellValue(event));
-    row.appendChild(cell);
+    this.element = document.createElement("div");
+    this.element.classList.add("cell");
+    this.element.id = `cell_${this.col}`;
+    this.element.dataset.row = this.row;
+    this.element.dataset.col = this.col;
+    this.element.textContent = "";
+    row.appendChild(this.element);
   }
 
-  setCellValue(event) {
-    const cell = event.target;
-    if (!cell.classList.contains('o') && !cell.classList.contains('o')) {
-      cell.classList.add('o');
+  setValue(value) {
+    if (this.element.classList.contains('o') || this.element.classList.contains('x')) {
+      alert('Cell already has value!')
     }
+
+    this.element.classList.add(value);
+    this.element.style.pointerEvents = "none";
   }
 }
 
