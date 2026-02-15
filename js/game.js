@@ -21,11 +21,13 @@ class TicTacToe {
   addEventListeners() {
     this.widthElement.addEventListener('change', (event) => {
       this.boardWidth = this.parseInputValue(event.target.value);
+      this.setWinConditionRange();
       this.newGame();
     });
 
     this.heightElement.addEventListener('change', (event) => {
       this.boardHeight = this.parseInputValue(event.target.value);
+      this.setWinConditionRange();
       this.newGame();
     });
 
@@ -33,6 +35,12 @@ class TicTacToe {
       this.winCondition = this.parseInputValue(event.target.value);
       this.newGame();
     });
+  }
+
+  // Calculate the diagonal of the cells, since this is the maximum of cells that can be set x and y
+  setWinConditionRange() {
+    const diagonalCellCount = Math.min(this.boardWidth, this.boardHeight);
+    this.winConditionElement.max = diagonalCellCount > 6 ? 6 : diagonalCellCount;
   }
 
   parseInputValue(value) {
@@ -46,7 +54,8 @@ class TicTacToe {
         this.boardHeight,
         this.boardWidth,
       ),
-      this.players
+      this.players,
+      this.winCondition
     )
 
     this.game.init();
@@ -60,13 +69,11 @@ class Player {
 }
 
 class Game {
-  constructor(board, players) {
-    this.board = board
+  constructor(board, players, winCondition) {
+    this.board = board;
     this.players = players;
     this.currentPlayer = this.getStartingPlayer();
-
-    console.log(`Initialized game board with ${this.board.rowCount} rows and ${this.board.colCount} cols`);
-    console.log(`Current player is ${this.currentPlayer.type}`);
+    this.winCondition = winCondition;
   }
 
   init() {
@@ -96,16 +103,85 @@ class Game {
     gameEl.appendChild(header);
   }
 
-  setEventListeners(){
+  setEventListeners() {
+    console.log(this.board);
     this.board.rows.forEach((row) => {
       row.cells.forEach((cell) => {
         // Add the click listener to the element of the cell
         cell.element.addEventListener('click', (event) => {
           cell.setValue(this.currentPlayer.type);
+          const won = this.checkMoveWonTheGame(row, cell);
+          if (won) {
+            this.finishGame();
+          }
           this.setCurrentPlayer();
         })
       });
     })
+  }
+
+  checkMoveWonTheGame(row, cell) {
+    console.log(this.board);
+    console.log(this.currentPlayer.type);
+    console.log(row);
+    console.log(cell);
+    const directions = [
+      [0, 1],   // horizontal
+      [1, 0],   // vertical
+      [1, 1],   // diag down-right
+      [1, -1]   // diag down-left
+    ];
+
+    const rowCount = this.board.rowCount;
+    const colCount = this.board.colCount;
+
+    for (let i = 0; i < directions.length; i++) {
+      const dr = directions[i][0];
+      const dc = directions[i][1];
+
+      let count = 1;
+
+      // Forward direction
+      let r = row.id + dr;
+      let c = cell.col + dc;
+
+      while (
+        r >= 0 && r < rowCount &&
+        c >= 0 && c < colCount &&
+        this.board.rows[r].cells[c].element.getAttribute('data-value') === this.currentPlayer.type
+      ) {
+        count++;
+        r += dr;
+        c += dc;
+      }
+
+      // Backward direction
+      r = row.id - dr;
+      c = cell.col - dc;
+
+      while (
+        r >= 0 && r < rowCount &&
+        c >= 0 && c < colCount &&
+        this.board.rows[r].cells[c].element.getAttribute('data-value') === this.currentPlayer.type
+      ) {
+        count++;
+        r -= dr;
+        c -= dc;
+      }
+
+      if (count >= this.winCondition) {
+        return true;
+      }
+    }
+  }
+
+  finishGame() {
+    alert(`Player ${this.currentPlayer.type} has won the game!`);
+  }
+
+  splitInteger(n) {
+    const half = Math.floor(n / 2);
+    return [half, n - half];
   }
 }
 
@@ -190,6 +266,7 @@ class Cell {
       alert('Cell already has value!')
     }
 
+    this.element.dataset.value = value;
     this.element.classList.add(value);
     this.element.style.pointerEvents = "none";
   }
