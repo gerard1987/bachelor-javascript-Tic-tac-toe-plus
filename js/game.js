@@ -49,6 +49,7 @@ class TicTacToe {
 
   newGame() {
     this.game = new Game(
+      this, // app reference
       new Board(
         this.boardElement,
         this.boardHeight,
@@ -69,7 +70,8 @@ class Player {
 }
 
 class Game {
-  constructor(board, players, winCondition) {
+  constructor(app, board, players, winCondition) {
+    this.app = app;
     this.board = board;
     this.players = players;
     this.currentPlayer = this.getStartingPlayer();
@@ -104,27 +106,19 @@ class Game {
   }
 
   setEventListeners() {
-    console.log(this.board);
     this.board.rows.forEach((row) => {
       row.cells.forEach((cell) => {
         // Add the click listener to the element of the cell
         cell.element.addEventListener('click', (event) => {
           cell.setValue(this.currentPlayer.type);
-          const won = this.checkMoveWonTheGame(row, cell);
-          if (won) {
-            this.finishGame();
-          }
+          this.checkMoveFinishedTheGame(row, cell);
           this.setCurrentPlayer();
         })
       });
     })
   }
 
-  checkMoveWonTheGame(row, cell) {
-    console.log(this.board);
-    console.log(this.currentPlayer.type);
-    console.log(row);
-    console.log(cell);
+  checkMoveFinishedTheGame(row, cell) {
     const directions = [
       [0, 1],   // horizontal
       [1, 0],   // vertical
@@ -134,6 +128,8 @@ class Game {
 
     const rowCount = this.board.rowCount;
     const colCount = this.board.colCount;
+
+    let won = false;
 
     for (let i = 0; i < directions.length; i++) {
       const dr = directions[i][0];
@@ -170,18 +166,28 @@ class Game {
       }
 
       if (count >= this.winCondition) {
-        return true;
+        won = true;
       }
+    }
+
+    if (won) {
+      this.finishGame();
+    }
+    else if (this.isDraw()) {
+      this.finishGame(true);
     }
   }
 
-  finishGame() {
-    alert(`Player ${this.currentPlayer.type} has won the game!`);
+  isDraw() {
+    return this.board.allCellsHaveValue()
   }
 
-  splitInteger(n) {
-    const half = Math.floor(n / 2);
-    return [half, n - half];
+  finishGame(draw = false) {
+    const currentPlayerType = this.currentPlayer.type;
+    const msg = !draw ? `Player ${currentPlayerType} has won the game!` : `It's a draw!`;
+
+    alert(msg);
+    this.app.newGame();
   }
 }
 
@@ -196,6 +202,21 @@ class Board {
 
   clear() {
     this.boardElement.innerHTML = "";
+  }
+
+  getTotalCells() {
+    return this.rowCount * this.colCount;
+  }
+
+  allCellsHaveValue() {
+    const totalCells = this.getTotalCells();
+    const filledCells = document.querySelectorAll('.cell[data-value]').length;
+
+    if (filledCells >= totalCells) {
+      return true;
+    }
+
+    return false;
   }
 
   render() {
