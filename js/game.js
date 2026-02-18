@@ -21,13 +21,11 @@ class TicTacToe {
   addEventListeners() {
     this.widthElement.addEventListener('change', (event) => {
       this.boardWidth = this.parseInputValue(event.target.value);
-      this.setWinConditionRange();
       this.newGame();
     });
 
     this.heightElement.addEventListener('change', (event) => {
       this.boardHeight = this.parseInputValue(event.target.value);
-      this.setWinConditionRange();
       this.newGame();
     });
 
@@ -40,7 +38,9 @@ class TicTacToe {
   // Calculate the diagonal of the cells, since this is the maximum of cells that can be set x and y
   setWinConditionRange() {
     const diagonalCellCount = Math.min(this.boardWidth, this.boardHeight);
-    this.winConditionElement.max = diagonalCellCount > 6 ? 6 : diagonalCellCount;
+    const maxValue = diagonalCellCount > 6 ? 6 : diagonalCellCount;
+    this.winConditionElement.max = maxValue;
+    this.winConditionElement.nextElementSibling.value = this.winConditionElement.value;
   }
 
   parseInputValue(value) {
@@ -48,6 +48,8 @@ class TicTacToe {
   }
 
   newGame() {
+    this.setWinConditionRange();
+
     this.game = new Game(
       this, // app reference
       new Board(
@@ -108,11 +110,17 @@ class Game {
   setEventListeners() {
     this.board.rows.forEach((row) => {
       row.cells.forEach((cell) => {
-        // Add the click listener to the element of the cell
-        cell.element.addEventListener('click', (event) => {
-          cell.setValue(this.currentPlayer.type);
-          this.checkMoveFinishedTheGame(row, cell);
-          this.setCurrentPlayer();
+        // Handle game move
+        cell.element.addEventListener('click', async (event) => {
+          await cell.setValue(this.currentPlayer.type)
+            .then((value) => {
+              this.checkMoveFinishedTheGame(row, cell);
+              this.setCurrentPlayer();
+            })
+            .catch((error) => {
+              console.error(error);
+              alert(error);
+            })
         })
       });
     })
@@ -282,19 +290,40 @@ class Cell {
     row.appendChild(this.element);
   }
 
-  setValue(value) {
-    if (this.element.classList.contains('o') || this.element.classList.contains('x')) {
-      alert('Cell already has value!')
-    }
+  async setValue(value) {
+    return new Promise(async (resolve, reject) => {
+      if (
+        this.element.classList.contains('o') ||
+        this.element.classList.contains('x') ||
+        this.element.hasAttribute('data-value')
+      ) {
+        reject('Cell already has value!')
+      }
 
-    this.element.dataset.value = value;
-    this.element.classList.add(value);
-    this.element.style.pointerEvents = "none";
+      this.element.dataset.value = value;
+      this.element.classList.add(value);
+      this.element.style.pointerEvents = "none";
+
+      // Wait for 2 frames to have the DOM visible updated before resolving
+      await waitForRender();
+
+      resolve(true);
+
+    });
   }
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-  // Initialize 
+  // Initialize app
   const ticTacToe = new TicTacToe();
   ticTacToe.newGame();
 });
+
+async function waitForRender() {
+  await waitForFrame();
+  await waitForFrame();
+}
+
+function waitForFrame() {
+  return new Promise(requestAnimationFrame);
+}
