@@ -6,6 +6,8 @@ class TicTacToe {
     this.heightElement = document.getElementById('input-height');
     this.winConditionElement = document.getElementById('input-win-condition');
     this.boardElement = document.getElementById('board');
+    this.scoreXElement = document.getElementById('score-x');
+    this.scoreOElement = document.getElementById('score-o');
 
     this.boardWidth = this.parseInputValue(this.widthElement.value);
     this.boardHeight = this.parseInputValue(this.heightElement.value);
@@ -14,6 +16,11 @@ class TicTacToe {
     this.players = [];
     this.players.push(new Player('x'));
     this.players.push(new Player('o'));
+
+    this.score = new Scores(
+      this.scoreXElement,
+      this.scoreOElement
+    );
 
     this.addEventListeners();
   }
@@ -33,6 +40,16 @@ class TicTacToe {
       this.winCondition = this.parseInputValue(event.target.value);
       this.newGame();
     });
+
+    this.playElement.addEventListener('click', (event) => {
+      this.newGame();
+    });
+
+    this.resetElement.addEventListener('click', (event) => {
+      this.score.clear();
+      this.newGame();
+    });
+
   }
 
   // Calculate the diagonal of the cells, since this is the maximum of cells that can be set x and y
@@ -43,12 +60,19 @@ class TicTacToe {
     this.winConditionElement.nextElementSibling.value = this.winConditionElement.value;
   }
 
+  renderScore() {
+    const scores = this.score.getScore();
+    this.scoreXElement.textContent = scores['x'] ?? 0;
+    this.scoreOElement.textContent = scores['o'] ?? 0;
+  }
+
   parseInputValue(value) {
     return parseInt(value, 10);
   }
 
   newGame() {
     this.setWinConditionRange();
+    this.renderScore();
 
     this.game = new Game(
       this, // app reference
@@ -68,6 +92,36 @@ class TicTacToe {
 class Player {
   constructor(type) {
     this.type = type;
+  }
+}
+
+class Scores {
+  constructor() {
+    this.x = 0;
+    this.o = 0;
+    localStorage.setItem('scores', JSON.stringify(this))
+  }
+
+  getScore() {
+    let scores = JSON.parse(localStorage.getItem('scores'));
+    if (scores == null) {
+      localStorage.setItem('scores', JSON.stringify(this));
+      scores = this.score;
+    }
+
+    return scores;
+  }
+
+  addScore(playerType) {
+    this[playerType]++;
+    localStorage.setItem('scores', JSON.stringify(this))
+  }
+
+  clear() {
+    this.x = 0; 
+    this.o = 0;
+    console.log(this);
+    localStorage.setItem('scores', JSON.stringify(this))
   }
 }
 
@@ -114,7 +168,7 @@ class Game {
         cell.element.addEventListener('click', async (event) => {
           await cell.setValue(this.currentPlayer.type)
             .then((value) => {
-              this.checkMoveFinishedTheGame(row, cell);
+              this.processMove(row, cell);
               this.setCurrentPlayer();
             })
             .catch((error) => {
@@ -126,7 +180,7 @@ class Game {
     })
   }
 
-  checkMoveFinishedTheGame(row, cell) {
+  processMove(row, cell) {
     const directions = [
       [0, 1],   // horizontal
       [1, 0],   // vertical
@@ -193,6 +247,10 @@ class Game {
   finishGame(draw = false) {
     const currentPlayerType = this.currentPlayer.type;
     const msg = !draw ? `Player ${currentPlayerType} has won the game!` : `It's a draw!`;
+
+    if (!draw) {
+      this.app.score.addScore(currentPlayerType);
+    }
 
     alert(msg);
     this.app.newGame();
