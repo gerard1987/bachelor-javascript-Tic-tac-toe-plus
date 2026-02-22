@@ -49,7 +49,6 @@ class TicTacToe {
       this.score.clear();
       this.newGame();
     });
-
   }
 
   /**
@@ -150,7 +149,7 @@ class Scores {
    * @returns {void}
    */
   clear() {
-    this.x = 0; 
+    this.x = 0;
     this.o = 0;
     localStorage.setItem('scores', JSON.stringify(this))
   }
@@ -221,10 +220,9 @@ class Game {
   setEventListeners() {
     this.board.rows.forEach((row) => {
       row.cells.forEach((cell) => {
-        // Handle game move
         cell.element.addEventListener('click', async (event) => {
           await cell.setValue(this.currentPlayer.type)
-            .then((value) => {
+            .then(() => {
               this.processMove(row, cell);
               this.setCurrentPlayer();
             })
@@ -238,7 +236,7 @@ class Game {
   }
 
   /**
-   * Processes game logic for a move using n-in-row direction.
+   * Processes game logic for a move using n-in-row direction relative to the element.
    * If a wincondition sequence is found for the current player, it will finish the game
    * Checks if game resulted in a draw if wincondition is not met
    * 
@@ -466,9 +464,10 @@ class Cell {
   /**
    * Sets the parameter to the cell's value
    * Waits for 2 frames before resolving the promise, to avoid logic finishing before paint.
+   * Rejects or resolves the promise based on whether the element has value.
    * 
    * @param {string} value 
-   * @returns 
+   * @returns {Promise}
    */
   async setValue(value) {
     return new Promise(async (resolve, reject) => {
