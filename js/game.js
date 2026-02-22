@@ -17,14 +17,14 @@ class TicTacToe {
     this.players.push(new Player('x'));
     this.players.push(new Player('o'));
 
-    this.score = new Scores(
-      this.scoreXElement,
-      this.scoreOElement
-    );
+    this.score = new Scores();
 
     this.addEventListeners();
   }
 
+  /**
+   * Adds the needed event listeners to the app for the game to function
+   */
   addEventListeners() {
     this.widthElement.addEventListener('change', (event) => {
       this.boardWidth = this.parseInputValue(event.target.value);
@@ -52,7 +52,9 @@ class TicTacToe {
 
   }
 
-  // Calculate the diagonal of the cells, since this is the maximum of cells that can be set x and y
+  /**
+   * Sets the diagonal cell count as the maximum win condition limit. With a maximum of 6
+   */
   setWinConditionRange() {
     const diagonalCellCount = Math.min(this.boardWidth, this.boardHeight);
     const maxValue = diagonalCellCount > 6 ? 6 : diagonalCellCount;
@@ -60,16 +62,30 @@ class TicTacToe {
     this.winConditionElement.nextElementSibling.value = this.winConditionElement.value;
   }
 
+  /**
+   * Renders the current score in the app.
+   */
   renderScore() {
     const scores = this.score.getScore();
     this.scoreXElement.textContent = scores['x'] ?? 0;
     this.scoreOElement.textContent = scores['o'] ?? 0;
   }
 
+  /**
+   * Parses a input value to an integer in base 10
+   * 
+   * @param {string}
+   * @returns {number}
+   */
   parseInputValue(value) {
     return parseInt(value, 10);
   }
 
+  /**
+   * Initializes a new TicTacToe game within the app context.
+   * 
+   * @returns {void}
+   */
   newGame() {
     this.setWinConditionRange();
     this.renderScore();
@@ -102,6 +118,11 @@ class Scores {
     localStorage.setItem('scores', JSON.stringify(this))
   }
 
+  /**
+   * Returns and parses the current score from localstorage
+   * 
+   * @returns {object}
+   */
   getScore() {
     let scores = JSON.parse(localStorage.getItem('scores'));
     if (scores == null) {
@@ -112,15 +133,25 @@ class Scores {
     return scores;
   }
 
+  /**
+   * Increment a player's score
+   *  
+   * @param {string} playerType 
+   * @returns {void}
+   */
   addScore(playerType) {
     this[playerType]++;
     localStorage.setItem('scores', JSON.stringify(this))
   }
 
+  /**
+   * Clears the current score.
+   * 
+   * @returns {void}
+   */
   clear() {
     this.x = 0; 
     this.o = 0;
-    console.log(this);
     localStorage.setItem('scores', JSON.stringify(this))
   }
 }
@@ -134,20 +165,40 @@ class Game {
     this.winCondition = winCondition;
   }
 
+  /**
+   * Initializes the game and renders the board
+   * 
+   * @returns {void}
+   */
   init() {
     this.board.render();
     this.setEventListeners();
   }
 
+  /**
+   * Returns a random selected player from the players.
+   * 
+   * @returns {Player}
+   */
   getStartingPlayer() {
     return this.players[Math.floor(Math.random() * this.players.length)];
   }
 
+  /**
+   * Sets the current player 
+   * 
+   * @returns {void}
+   */
   setCurrentPlayer() {
     this.currentPlayer = this.players.find(player => player.type !== this.currentPlayer.type);
     this.showCurrentPlayer();
   }
 
+  /**
+   * Renders the current player message
+   * 
+   * @returns {void}
+   */
   showCurrentPlayer() {
     let header = document.getElementById('current_player');
     if (header == null) {
@@ -161,6 +212,12 @@ class Game {
     gameEl.appendChild(header);
   }
 
+  /**
+   * Sets game logic by adding event listener for every cell
+   * Processes move 
+   * 
+   * @returns {void}
+   */
   setEventListeners() {
     this.board.rows.forEach((row) => {
       row.cells.forEach((cell) => {
@@ -180,6 +237,15 @@ class Game {
     })
   }
 
+  /**
+   * Processes game logic for a move using n-in-row direction.
+   * If a wincondition sequence is found for the current player, it will finish the game
+   * Checks if game resulted in a draw if wincondition is not met
+   * 
+   * @param {Row} row 
+   * @param {Cell} cell 
+   * @returns {void}
+   */
   processMove(row, cell) {
     const directions = [
       [0, 1],   // horizontal
@@ -240,10 +306,21 @@ class Game {
     }
   }
 
+  /**
+   * Returns whether game resulted in a draw
+   * 
+   * @returns {boolean}
+   */
   isDraw() {
     return this.board.allCellsHaveValue()
   }
 
+  /**
+   * Finishes the game by updating the score, displaying a message and starting a new game.
+   * 
+   * @param {boolean} draw 
+   * @returns {void}
+   */
   finishGame(draw = false) {
     const currentPlayerType = this.currentPlayer.type;
     const msg = !draw ? `Player ${currentPlayerType} has won the game!` : `It's a draw!`;
@@ -266,14 +343,27 @@ class Board {
     this.clear();
   }
 
+  /**
+   * Clears the board element
+   */
   clear() {
     this.boardElement.innerHTML = "";
   }
 
+  /**
+   * Returns the total grid count
+   * 
+   * @returns {number}
+   */
   getTotalCells() {
     return this.rowCount * this.colCount;
   }
 
+  /**
+   * Checks if all the cells on the board have a value
+   * 
+   * @returns {boolean}
+   */
   allCellsHaveValue() {
     const totalCells = this.getTotalCells();
     const filledCells = document.querySelectorAll('.cell[data-value]').length;
@@ -285,6 +375,11 @@ class Board {
     return false;
   }
 
+  /**
+   * Renders the board as HTML 
+   * 
+   * @returns {void}
+   */
   render() {
     // Generate board rows
     for (let i = 0; i < this.rowCount; i++) {
@@ -311,6 +406,11 @@ class Row {
     this.cells = [];
   }
 
+  /**
+   * Generates the row's HTML element.
+   * 
+   * @returns {HTMLDivElement} row
+   */
   generateHtml() {
     const row = document.createElement("div");
     row.classList.add('row');
@@ -318,11 +418,21 @@ class Row {
     return row;
   }
 
+  /**
+   * Adds a new cell to the Row
+   * 
+   * @returns {void}
+   */
   addCell() {
     const cell = new Cell(this.id, this.cellCount++);
     this.cells.push(cell);
   }
 
+  /**
+   * Generates all the cells on the board
+   * 
+   * @returns {void}
+   */
   generateCells() {
     this.cells.forEach(cell => {
       cell.generateHtml();
@@ -337,6 +447,11 @@ class Cell {
     this.element = null;
   }
 
+  /**
+   * Generates the cell's HTML element.
+   * 
+   * @returns {void}
+   */
   generateHtml() {
     const row = document.getElementById(`row_${this.row}`);
     this.element = document.createElement("div");
@@ -348,6 +463,13 @@ class Cell {
     row.appendChild(this.element);
   }
 
+  /**
+   * Sets the parameter to the cell's value
+   * Waits for 2 frames before resolving the promise, to avoid logic finishing before paint.
+   * 
+   * @param {string} value 
+   * @returns 
+   */
   async setValue(value) {
     return new Promise(async (resolve, reject) => {
       if (
@@ -372,7 +494,7 @@ class Cell {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-  // Initialize app
+  // Initialize the app
   const ticTacToe = new TicTacToe();
   ticTacToe.newGame();
 });
