@@ -222,7 +222,7 @@ class Game {
       row.cells.forEach((cell) => {
         cell.element.addEventListener('click', async (event) => {
           await cell.setValue(this.currentPlayer.type)
-            .then(() => {
+            .then(async () => {
               this.processMove(row, cell);
               this.setCurrentPlayer();
             })
@@ -244,80 +244,121 @@ class Game {
    * @param {Cell} cell 
    * @returns {void}
    */
-  processMove(row, cell) {
-    const won = this.winConditionSequenceReached(row, cell);
-
-    if (won) {
-      this.finishGame();
-    }
-    else if (this.isDraw()) {
-      this.finishGame(true);
-    }
+  async processMove(row, cell) {
+    document.getElementById("board").style.pointerEvents = "none";
+    await this.winConditionSequenceReached(row, cell)
+      .then((result) => {
+        if (result) {
+          this.finishGame();
+        }
+        else if (this.isDraw()) {
+          this.finishGame(true);
+        }
+      })
+      .catch((error) => {
+        console.error(error);
+        alert(error);
+      })
+      .finally(() => {
+        document.getElementById("board").style.pointerEvents = "initial";
+      });
   }
 
   /**
   * Checks if the current cell has a winCondition sequence in N direction
   * Scans the board from the cell index while there is a matching types untill sequence has been found
-  * Returns true if sequence matches winCondition.
+  * Returns a promise with a boolean if sequence matches winCondition and animates the sequence
   * 
   * @param {Row} row 
   * @param {Cell} cell 
-  * @returns {boolean}
+  * @returns {Promise}
   */
-  winConditionSequenceReached(row, cell) {
-    const directions = [
-      [0, 1],   // horizontal
-      [1, 0],   // vertical
-      [1, 1],   // diag down-right
-      [1, -1]   // diag down-left
-    ];
+  async winConditionSequenceReached(row, cell) {
 
-    const rowCount = this.board.rowCount;
-    const colCount = this.board.colCount;
+    return new Promise(async (resolve, reject) => {
+      const directions = [
+        [0, 1],   // horizontal
+        [1, 0],   // vertical
+        [1, 1],   // diag down-right
+        [1, -1]   // diag down-left
+      ];
 
-    for (let i = 0; i < directions.length; i++) {
-      const dr = directions[i][0];
-      const dc = directions[i][1];
+      const rowCount = this.board.rowCount;
+      const colCount = this.board.colCount;
 
-      let count = 1;
+      for (let i = 0; i < directions.length; i++) {
+        const dr = directions[i][0];
+        const dc = directions[i][1];
+        let sequenceElements = [
+          cell.element
+        ];
 
-      // Get the cell neighbor in positive direction
-      let r = row.id + dr;
-      let c = cell.col + dc;
+        let count = 1;
 
-      while (
-        r >= 0 && r < rowCount &&
-        c >= 0 && c < colCount &&
-        this.board.rows[r].cells[c].element.getAttribute('data-value') === this.currentPlayer.type
-      ) {
-        // increment sequence counter and cell offset
-        count++;
-        r += dr;
-        c += dc;
+        // Get the cell neighbor in positive direction
+        let r = row.id + dr;
+        let c = cell.col + dc;
+
+        while (
+          r >= 0 && r < rowCount &&
+          c >= 0 && c < colCount &&
+          this.board.rows[r].cells[c].element.getAttribute('data-value') === this.currentPlayer.type
+        ) {
+          // increment sequence counter and cell offset
+          sequenceElements.push(this.board.rows[r].cells[c].element);
+          count++;
+          r += dr;
+          c += dc;
+        }
+
+        // Get the cell neighbor in negative direction
+        r = row.id - dr;
+        c = cell.col - dc;
+
+        while (
+          r >= 0 && r < rowCount &&
+          c >= 0 && c < colCount &&
+          this.board.rows[r].cells[c].element.getAttribute('data-value') === this.currentPlayer.type
+        ) {
+          // increment sequence counter and cell offset
+          sequenceElements.push(this.board.rows[r].cells[c].element);
+          count++;
+          r -= dr;
+          c -= dc;
+        }
+
+        // Sequence has reached win condition! We can break out the function
+        if (count >= this.winCondition) {
+          await this.animateSequence(sequenceElements);
+          resolve(true);
+        }
       }
 
-      // Get the cell neighbor in negative direction
-      r = row.id - dr;
-      c = cell.col - dc;
+      resolve(false);
+    });
+  }
 
-      while (
-        r >= 0 && r < rowCount &&
-        c >= 0 && c < colCount &&
-        this.board.rows[r].cells[c].element.getAttribute('data-value') === this.currentPlayer.type
-      ) {
-        // increment sequence counter and cell offset
-        count++;
-        r -= dr;
-        c -= dc;
-      }
+  async animateSequence(sequenceElements) {
+    return new Promise(async (resolve, reject) => {
+      const totalAnimationTime = 3000;
+      const stepTime = totalAnimationTime / sequenceElements.length;
+      const colorStep = 100 / sequenceElements.length;
 
-      // Sequence has reached win condition! We can break out the function
-      if (count >= this.winCondition) {
-        return true;
-      }
-    }
+      sequenceElements.forEach((el, i) => {
+        const light = (33 + colorStep * (i + 1));
+        const saturation = light < 100 ? light : 100;
 
-    return false;
+        setTimeout(() => {
+          el.style.transition = "background-color .4s ease";
+          el.style.backgroundColor = `hsl(120, ${saturation}%, 90%)`;
+
+          // resolve after the last animation step
+          if (i === sequenceElements.length - 1) {
+            setTimeout(resolve, 400);
+          }
+        }, i * stepTime);
+      });
+    });
   }
 
   /**
