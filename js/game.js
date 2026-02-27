@@ -236,15 +236,35 @@ class Game {
   }
 
   /**
-   * Processes game logic for a move using n-in-row direction relative to the element.
-   * If a wincondition sequence is found for the current player, it will finish the game
-   * Checks if game resulted in a draw if wincondition is not met
+   * Checks if the move has created a winning condition sequence.
+   * Finishes the game if true, 
+   * Will check if game resulted in a draw if false
    * 
    * @param {Row} row 
    * @param {Cell} cell 
    * @returns {void}
    */
   processMove(row, cell) {
+    const won = this.winConditionSequenceReached(row, cell);
+
+    if (won) {
+      this.finishGame();
+    }
+    else if (this.isDraw()) {
+      this.finishGame(true);
+    }
+  }
+
+  /**
+  * Checks if the current cell has a winCondition sequence in N direction
+  * Scans the board from the cell index while there is a matching types untill sequence has been found
+  * Returns true if sequence matches winCondition.
+  * 
+  * @param {Row} row 
+  * @param {Cell} cell 
+  * @returns {boolean}
+  */
+  winConditionSequenceReached(row, cell) {
     const directions = [
       [0, 1],   // horizontal
       [1, 0],   // vertical
@@ -255,15 +275,13 @@ class Game {
     const rowCount = this.board.rowCount;
     const colCount = this.board.colCount;
 
-    let won = false;
-
     for (let i = 0; i < directions.length; i++) {
       const dr = directions[i][0];
       const dc = directions[i][1];
 
       let count = 1;
 
-      // Forward direction
+      // Get the cell neighbor in positive direction
       let r = row.id + dr;
       let c = cell.col + dc;
 
@@ -272,12 +290,13 @@ class Game {
         c >= 0 && c < colCount &&
         this.board.rows[r].cells[c].element.getAttribute('data-value') === this.currentPlayer.type
       ) {
+        // increment sequence counter and cell offset
         count++;
         r += dr;
         c += dc;
       }
 
-      // Backward direction
+      // Get the cell neighbor in negative direction
       r = row.id - dr;
       c = cell.col - dc;
 
@@ -286,22 +305,19 @@ class Game {
         c >= 0 && c < colCount &&
         this.board.rows[r].cells[c].element.getAttribute('data-value') === this.currentPlayer.type
       ) {
+        // increment sequence counter and cell offset
         count++;
         r -= dr;
         c -= dc;
       }
 
+      // Sequence has reached win condition! We can break out the function
       if (count >= this.winCondition) {
-        won = true;
+        return true;
       }
     }
 
-    if (won) {
-      this.finishGame();
-    }
-    else if (this.isDraw()) {
-      this.finishGame(true);
-    }
+    return false;
   }
 
   /**
