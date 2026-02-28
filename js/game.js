@@ -61,6 +61,7 @@ class TicTacToe {
     const maxValue = diagonalCellCount > 6 ? 6 : diagonalCellCount;
     this.winConditionElement.max = maxValue;
     this.winConditionElement.nextElementSibling.value = this.winConditionElement.value;
+    this.winCondition = this.winConditionElement.value;
   }
 
   /**
@@ -545,7 +546,7 @@ class Cell {
    * @param {string} value 
    * @returns {Promise}
    */
-  async setValue(value) {
+  setValue(value) {
     if (
       this.element.classList.contains('o') ||
       this.element.classList.contains('x') ||
@@ -557,9 +558,6 @@ class Cell {
     this.element.dataset.value = value;
     this.element.classList.add(value);
     this.element.style.pointerEvents = "none";
-
-    // Wait for 2 frames to have the DOM visible updated before resolving
-    await waitForRender();
   }
 }
 
@@ -568,15 +566,6 @@ document.addEventListener('DOMContentLoaded', function () {
   const ticTacToe = new TicTacToe();
   ticTacToe.newGame();
 });
-
-async function waitForRender() {
-  await waitForFrame();
-  await waitForFrame();
-}
-
-function waitForFrame() {
-  return new Promise(requestAnimationFrame);
-}
 
 function pulseElement(el) {
   return el.animate(
