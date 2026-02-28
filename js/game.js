@@ -234,7 +234,7 @@ class Game {
         cell.element.addEventListener('click', async (event) => {
           await cell.setValue(this.currentPlayer.type)
             .then(async () => {
-              this.processMove(row, cell);
+              await this.processMove(row, cell);
               this.setCurrentPlayer();
             })
             .catch((error) => {
@@ -395,12 +395,17 @@ class Game {
     if (!draw) {
       this.app.score.addScore(currentPlayerType);
     }
+    else {
+      const cells = document.getElementsByClassName('cell');
+
+      for (const el of cells) {
+        el.style.transition = "transition: border-color .4s ease;"
+        el.style.border = "1px solid #5b5b9c";
+        pulseElement(el);
+      }
+    }
 
     this.board.showPlayerMessage(msg);
-
-    setTimeout(() => {
-      this.app.newGame()
-    }, 1000);
   }
 }
 
