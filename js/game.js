@@ -197,6 +197,7 @@ class Game {
    * @returns {void}
    */
   init() {
+    this.board.boardElement.style.pointerEvents = "initial";
     this.board.render();
     this.board.showPlayerMessage(`Game has started it's player: ${this.currentPlayer.type} turn`);
     this.setEventListeners();
@@ -232,15 +233,8 @@ class Game {
     this.board.rows.forEach((row) => {
       row.cells.forEach((cell) => {
         cell.element.addEventListener('click', async (event) => {
-          await cell.setValue(this.currentPlayer.type)
-            .then(async () => {
-              await this.processMove(row, cell);
-              this.setCurrentPlayer();
-            })
-            .catch((error) => {
-              console.error(error);
-              alert(error);
-            })
+            await cell.setValue(this.currentPlayer.type);
+            this.processMove(row, cell);
         })
       });
     })
@@ -255,24 +249,18 @@ class Game {
    * @param {Cell} cell 
    * @returns {void}
    */
-  async processMove(row, cell) {
-    document.getElementById("board").style.pointerEvents = "none";
-    await this.winConditionSequenceReached(row, cell)
-      .then((result) => {
-        if (result) {
-          this.finishGame();
-        }
-        else if (this.isDraw()) {
-          this.finishGame(true);
-        }
-      })
-      .catch((error) => {
-        console.error(error);
-        alert(error);
-      })
-      .finally(() => {
-        document.getElementById("board").style.pointerEvents = "initial";
-      });
+  processMove(row, cell) {
+    const result = this.winConditionSequenceReached(row, cell);
+
+    if (result) {
+      this.finishGame();
+    }
+    else if (this.isDraw()) {
+      this.finishGame(true);
+    }
+    else {
+      this.setCurrentPlayer();
+    }
   }
 
   /**
@@ -284,92 +272,82 @@ class Game {
   * @param {Cell} cell 
   * @returns {Promise}
   */
-  async winConditionSequenceReached(row, cell) {
+  winConditionSequenceReached(row, cell) {
+    const directions = [
+      [0, 1],   // horizontal
+      [1, 0],   // vertical
+      [1, 1],   // diag down-right
+      [1, -1]   // diag down-left
+    ];
 
-    return new Promise(async (resolve, reject) => {
-      const directions = [
-        [0, 1],   // horizontal
-        [1, 0],   // vertical
-        [1, 1],   // diag down-right
-        [1, -1]   // diag down-left
+    const rowCount = this.board.rowCount;
+    const colCount = this.board.colCount;
+
+    for (let i = 0; i < directions.length; i++) {
+      const dr = directions[i][0];
+      const dc = directions[i][1];
+      let sequenceElements = [
+        cell.element
       ];
 
-      const rowCount = this.board.rowCount;
-      const colCount = this.board.colCount;
+      let count = 1;
 
-      for (let i = 0; i < directions.length; i++) {
-        const dr = directions[i][0];
-        const dc = directions[i][1];
-        let sequenceElements = [
-          cell.element
-        ];
+      // Get the cell neighbor in positive direction
+      let r = row.id + dr;
+      let c = cell.col + dc;
 
-        let count = 1;
-
-        // Get the cell neighbor in positive direction
-        let r = row.id + dr;
-        let c = cell.col + dc;
-
-        while (
-          r >= 0 && r < rowCount &&
-          c >= 0 && c < colCount &&
-          this.board.rows[r].cells[c].element.getAttribute('data-value') === this.currentPlayer.type
-        ) {
-          // increment sequence counter and cell offset
-          sequenceElements.push(this.board.rows[r].cells[c].element);
-          count++;
-          r += dr;
-          c += dc;
-        }
-
-        // Get the cell neighbor in negative direction
-        r = row.id - dr;
-        c = cell.col - dc;
-
-        while (
-          r >= 0 && r < rowCount &&
-          c >= 0 && c < colCount &&
-          this.board.rows[r].cells[c].element.getAttribute('data-value') === this.currentPlayer.type
-        ) {
-          // increment sequence counter and cell offset
-          sequenceElements.push(this.board.rows[r].cells[c].element);
-          count++;
-          r -= dr;
-          c -= dc;
-        }
-
-        // Sequence has reached win condition! We can break out the function
-        if (count >= this.winCondition) {
-          await this.animateSequence(sequenceElements);
-          resolve(true);
-        }
+      while (
+        r >= 0 && r < rowCount &&
+        c >= 0 && c < colCount &&
+        this.board.rows[r].cells[c].element.getAttribute('data-value') === this.currentPlayer.type
+      ) {
+        // increment sequence counter and cell offset
+        sequenceElements.push(this.board.rows[r].cells[c].element);
+        count++;
+        r += dr;
+        c += dc;
       }
 
-      resolve(false);
-    });
+      // Get the cell neighbor in negative direction
+      r = row.id - dr;
+      c = cell.col - dc;
+
+      while (
+        r >= 0 && r < rowCount &&
+        c >= 0 && c < colCount &&
+        this.board.rows[r].cells[c].element.getAttribute('data-value') === this.currentPlayer.type
+      ) {
+        // increment sequence counter and cell offset
+        sequenceElements.push(this.board.rows[r].cells[c].element);
+        count++;
+        r -= dr;
+        c -= dc;
+      }
+
+      // Sequence has reached win condition! We can break out the function
+      if (count >= this.winCondition) {
+        this.animateSequence(sequenceElements);
+        return true;
+      }
+    }
+
+    return false;
   }
 
-  async animateSequence(sequenceElements) {
-    return new Promise(async (resolve, reject) => {
-      const totalAnimationTime = 1500;
-      const stepTime = totalAnimationTime / sequenceElements.length;
-      const colorStep = 100 / sequenceElements.length;
+  animateSequence(sequenceElements) {
+    const totalAnimationTime = 1500;
+    const stepTime = totalAnimationTime / sequenceElements.length;
+    const colorStep = 100 / sequenceElements.length;
 
-      sequenceElements.forEach((el, i) => {
-        const light = (33 + colorStep * (i + 1));
-        const saturation = light < 100 ? light : 100;
+    sequenceElements.forEach((el, i) => {
+      const light = (33 + colorStep * (i + 1));
+      const saturation = light < 100 ? light : 100;
 
-        setTimeout(() => {
-          el.style.transition = "background-color .4s ease";
-          el.style.backgroundColor = `hsl(120, ${saturation}%, 90%)`;
-          pulseElement(el);
-
-          // resolve after the last animation step
-          if (i === sequenceElements.length - 1) {
-            setTimeout(resolve, 400);
-          }
-        }, i * stepTime);
-      });
+      setTimeout(() => {
+        el.style.transition = "background-color .4s ease";
+        el.style.backgroundColor = `hsl(120, ${saturation}%, 90%)`;
+        pulseElement(el);
+      }, i * stepTime);
     });
   }
 
@@ -406,6 +384,7 @@ class Game {
     }
 
     this.board.showPlayerMessage(msg);
+    this.board.boardElement.style.pointerEvents = "none";
   }
 }
 
@@ -567,25 +546,20 @@ class Cell {
    * @returns {Promise}
    */
   async setValue(value) {
-    return new Promise(async (resolve, reject) => {
-      if (
-        this.element.classList.contains('o') ||
-        this.element.classList.contains('x') ||
-        this.element.hasAttribute('data-value')
-      ) {
-        reject('Cell already has value!')
-      }
+    if (
+      this.element.classList.contains('o') ||
+      this.element.classList.contains('x') ||
+      this.element.hasAttribute('data-value')
+    ) {
+      alert('Cell already has value!')
+    }
 
-      this.element.dataset.value = value;
-      this.element.classList.add(value);
-      this.element.style.pointerEvents = "none";
+    this.element.dataset.value = value;
+    this.element.classList.add(value);
+    this.element.style.pointerEvents = "none";
 
-      // Wait for 2 frames to have the DOM visible updated before resolving
-      await waitForRender();
-
-      resolve(true);
-
-    });
+    // Wait for 2 frames to have the DOM visible updated before resolving
+    await waitForRender();
   }
 }
 
