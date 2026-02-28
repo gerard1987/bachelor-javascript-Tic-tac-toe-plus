@@ -6,8 +6,6 @@ class TicTacToe {
     this.heightElement = document.getElementById('input-height');
     this.winConditionElement = document.getElementById('input-win-condition');
     this.boardElement = document.getElementById('board');
-    this.scoreXElement = document.getElementById('score-x');
-    this.scoreOElement = document.getElementById('score-o');
 
     this.boardWidth = this.parseInputValue(this.widthElement.value);
     this.boardHeight = this.parseInputValue(this.heightElement.value);
@@ -24,6 +22,8 @@ class TicTacToe {
 
   /**
    * Adds the needed event listeners to the app for the game to function
+   * 
+   * @returns {void}
    */
   addEventListeners() {
     this.widthElement.addEventListener('change', (event) => {
@@ -53,21 +53,14 @@ class TicTacToe {
 
   /**
    * Sets the diagonal cell count as the maximum win condition limit. With a maximum of 6
+   * 
+   * @returns {void}
    */
   setWinConditionRange() {
     const diagonalCellCount = Math.min(this.boardWidth, this.boardHeight);
     const maxValue = diagonalCellCount > 6 ? 6 : diagonalCellCount;
     this.winConditionElement.max = maxValue;
     this.winConditionElement.nextElementSibling.value = this.winConditionElement.value;
-  }
-
-  /**
-   * Renders the current score in the app.
-   */
-  renderScore() {
-    const scores = this.score.getScore();
-    this.scoreXElement.textContent = scores['x'] ?? 0;
-    this.scoreOElement.textContent = scores['o'] ?? 0;
   }
 
   /**
@@ -87,7 +80,7 @@ class TicTacToe {
    */
   newGame() {
     this.setWinConditionRange();
-    this.renderScore();
+    this.score.renderScores();
 
     this.game = new Game(
       this, // app reference
@@ -114,7 +107,6 @@ class Scores {
   constructor() {
     this.x = 0;
     this.o = 0;
-    localStorage.setItem('scores', JSON.stringify(this))
   }
 
   /**
@@ -126,8 +118,10 @@ class Scores {
     let scores = JSON.parse(localStorage.getItem('scores'));
     if (scores == null) {
       localStorage.setItem('scores', JSON.stringify(this));
-      scores = this.score;
     }
+
+    // Set the properties
+    Object.assign(this, scores);
 
     return scores;
   }
@@ -140,7 +134,40 @@ class Scores {
    */
   addScore(playerType) {
     this[playerType]++;
-    localStorage.setItem('scores', JSON.stringify(this))
+    localStorage.setItem('scores', JSON.stringify(this));
+
+    this.renderScore(playerType);
+
+    const scoreEl = document.getElementById(`score-${playerType}`).parentElement;
+    scoreEl.style = "background-color: #55f37e; transition: background-color .4s ease;"
+    pulseElement(scoreEl);
+  }
+
+  /**
+   * Renders the current score
+   * 
+   * @param {string} type
+   * @returns {void}
+   */
+  renderScore(type) {
+    const scoreValueElement = document.getElementById(`score-${type}`);
+    scoreValueElement.textContent = this[type];
+  }
+
+  /**
+   * Renders the current score in the app.
+   * 
+   * @returns {void}
+   */
+  renderScores() {
+    const scores = this.getScore();
+
+    for (const score in scores) {
+      this.renderScore(score);
+
+      // Reset parent styles
+      document.getElementById(`score-${score}`).parentElement.style.backgroundColor = "";
+    }
   }
 
   /**
@@ -171,6 +198,7 @@ class Game {
    */
   init() {
     this.board.render();
+    this.board.showPlayerMessage(`Game has started it's player: ${this.currentPlayer.type} turn`);
     this.setEventListeners();
   }
 
@@ -190,25 +218,8 @@ class Game {
    */
   setCurrentPlayer() {
     this.currentPlayer = this.players.find(player => player.type !== this.currentPlayer.type);
-    this.showCurrentPlayer();
-  }
-
-  /**
-   * Renders the current player message
-   * 
-   * @returns {void}
-   */
-  showCurrentPlayer() {
-    let header = document.getElementById('current_player');
-    if (header == null) {
-      header = document.createElement('h1');
-      header.id = 'current_player';
-    }
-
-    header.innerHTML = `Player ${this.currentPlayer.type} turn`;
-
-    const gameEl = this.board.boardElement.parentElement;
-    gameEl.appendChild(header);
+    const playerMessage = `Player ${this.currentPlayer.type} turn`;
+    this.board.showPlayerMessage(playerMessage);
   }
 
   /**
@@ -340,7 +351,7 @@ class Game {
 
   async animateSequence(sequenceElements) {
     return new Promise(async (resolve, reject) => {
-      const totalAnimationTime = 3000;
+      const totalAnimationTime = 1500;
       const stepTime = totalAnimationTime / sequenceElements.length;
       const colorStep = 100 / sequenceElements.length;
 
@@ -351,6 +362,7 @@ class Game {
         setTimeout(() => {
           el.style.transition = "background-color .4s ease";
           el.style.backgroundColor = `hsl(120, ${saturation}%, 90%)`;
+          pulseElement(el);
 
           // resolve after the last animation step
           if (i === sequenceElements.length - 1) {
@@ -384,8 +396,11 @@ class Game {
       this.app.score.addScore(currentPlayerType);
     }
 
-    alert(msg);
-    this.app.newGame();
+    this.board.showPlayerMessage(msg);
+
+    setTimeout(() => {
+      this.app.newGame()
+    }, 1000);
   }
 }
 
@@ -452,6 +467,26 @@ class Board {
       this.rows.push(row);
     }
   }
+
+  /**
+   * Renders the player message
+   * 
+   * @returns {void}
+   */
+  showPlayerMessage(msg) {
+
+    let msgElement = document.getElementById('current_player');
+    if (msgElement == null) {
+      msgElement = document.createElement('h1');
+      msgElement.id = 'current_player';
+    }
+
+    msgElement.textContent = msg;
+
+    const gameEl = this.boardElement.parentElement;
+    gameEl.appendChild(msgElement);
+  }
+
 }
 
 class Row {
@@ -562,4 +597,18 @@ async function waitForRender() {
 
 function waitForFrame() {
   return new Promise(requestAnimationFrame);
+}
+
+function pulseElement(el) {
+  return el.animate(
+    [
+      { transform: "scale(1)" },
+      { transform: "scale(1.15)" },
+      { transform: "scale(1)" }
+    ],
+    {
+      duration: 300,
+      easing: "ease"
+    }
+  ).finished;
 }
