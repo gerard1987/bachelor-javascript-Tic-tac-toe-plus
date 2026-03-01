@@ -323,7 +323,7 @@ class Game {
 
       // Get the cell neighbor in positive direction
       let rowOffset = row.id + directionRow;
-      let columnOffset = cell.col + directionColumn;
+      let columnOffset = cell.id + directionColumn;
 
       while (
         rowOffset >= 0 && rowOffset < rowCount &&
@@ -339,7 +339,7 @@ class Game {
 
       // Get the cell neighbor in negative direction
       rowOffset = row.id - directionRow;
-      columnOffset = cell.col - directionColumn;
+      columnOffset = cell.id - directionColumn;
 
       while (
         rowOffset >= 0 && rowOffset < rowCount &&
@@ -476,7 +476,7 @@ class Board {
 
       // Initialize and add the row cells
       for (let i = 0; i < this.colCount; i++) {
-        const cell = new Cell(row.id, i);
+        const cell = new Cell(i, row.id);
         const htmlcell = cell.generateHtml();
         row.cells.push(cell);
         row.element.appendChild(htmlcell);
@@ -543,9 +543,9 @@ class Row {
 }
 
 class Cell {
-  constructor(row, col) {
-    this.row = row;
-    this.col = col;
+  constructor(id, rowId) {
+    this.id = id;
+    this.rowId = rowId;
     this.element = null;
   }
 
@@ -557,9 +557,9 @@ class Cell {
   generateHtml() {
     this.element = document.createElement("div");
     this.element.classList.add("cell");
-    this.element.id = `cell_${this.col}`;
-    this.element.dataset.row = this.row;
-    this.element.dataset.col = this.col;
+    this.element.id = `cell_${this.id}`;
+    this.element.dataset.row = this.rowId;
+    this.element.dataset.col = this.id;
     this.element.textContent = "";
 
     return this.element;
