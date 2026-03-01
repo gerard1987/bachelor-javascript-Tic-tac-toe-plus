@@ -53,6 +53,7 @@ class TicTacToe {
 
   /**
    * Sets the diagonal cell count as the maximum win condition limit. With a maximum of 6
+   * Sets winCondition
    * 
    * @returns {void}
    */
@@ -94,7 +95,7 @@ class TicTacToe {
       this.winCondition
     )
 
-    this.game.init();
+    this.game.start();
   }
 }
 
@@ -112,6 +113,7 @@ class Scores {
 
   /**
    * Returns and parses the current score from localstorage
+   * Assigns the properties of this object with localstorage values.
    * 
    * @returns {object}
    */
@@ -121,14 +123,14 @@ class Scores {
       localStorage.setItem('scores', JSON.stringify(this));
     }
 
-    // Set the properties
+    // Update the properties from localstorage truth
     Object.assign(this, scores);
 
     return scores;
   }
 
   /**
-   * Increment a player's score
+   * Increment a player's score and stores it in localstorage
    *  
    * @param {string} playerType 
    * @returns {void}
@@ -173,6 +175,7 @@ class Scores {
 
   /**
    * Clears the current score.
+   * Empties the localstorage score
    * 
    * @returns {void}
    */
@@ -193,12 +196,11 @@ class Game {
   }
 
   /**
-   * Initializes the game and renders the board
+   * Starts the game and renders the board
    * 
    * @returns {void}
    */
-  init() {
-    this.board.boardElement.style.pointerEvents = "initial";
+  start() {
     this.board.render();
     this.board.showPlayerMessage(`Game has started it's player: ${this.currentPlayer.type} turn`);
     this.setEventListeners();
@@ -225,26 +227,52 @@ class Game {
   }
 
   /**
-   * Sets game logic by adding event listener for every cell
-   * Processes move 
+   * Sets click event listeners for all the board cells and binds it to handleCellClick callback function.
    * 
    * @returns {void}
    */
   setEventListeners() {
     this.board.rows.forEach((row) => {
       row.cells.forEach((cell) => {
-        cell.element.addEventListener('click', async (event) => {
-            await cell.setValue(this.currentPlayer.type);
-            this.processMove(row, cell);
-        })
+        const handler = () => this.handleCellClick(row, cell);
+        cell.boundClickHandler = handler;
+        cell.element.addEventListener('click', handler);
       });
     })
   }
 
   /**
-   * Checks if the move has created a winning condition sequence.
-   * Finishes the game if true, 
-   * Will check if game resulted in a draw if false
+   * Handles the game logic of a cell's click event.
+   * 
+   * @param {Row} row 
+   * @param {Cell} cell 
+   */
+  handleCellClick(row, cell) {
+    try {
+      cell.setValue(this.currentPlayer.type);
+      this.processMove(row, cell);
+    }
+    catch (error) {
+      alert(error);
+    }
+  }
+
+  /**
+   * Removes all of the bound click handlers from the board cells
+   * 
+   * @returns {void}
+   */
+  removeEventListeners() {
+    this.board.rows.forEach((row) => {
+      row.cells.forEach((cell) => {
+        cell.element.removeEventListener('click', cell.boundClickHandler);
+      })
+    });
+  }
+
+  /**
+   * Checks if the move has created a winning condition sequence and finishes the game if true or checks if game resulted in a draw 
+   * Sets the new current player if move did not resolve in a finished game
    * 
    * @param {Row} row 
    * @param {Cell} cell 
@@ -266,12 +294,12 @@ class Game {
 
   /**
   * Checks if the current cell has a winCondition sequence in N direction
-  * Scans the board from the cell index while there is a matching types untill sequence has been found
-  * Returns a promise with a boolean if sequence matches winCondition and animates the sequence
+  * Scans the board from the cell index while there is a matching types until a sequence has been found
+  * Returns a boolean if sequence matches winCondition and animates the sequence
   * 
   * @param {Row} row 
   * @param {Cell} cell 
-  * @returns {Promise}
+  * @returns {boolean}
   */
   winConditionSequenceReached(row, cell) {
     const directions = [
@@ -285,8 +313,8 @@ class Game {
     const colCount = this.board.colCount;
 
     for (let i = 0; i < directions.length; i++) {
-      const dr = directions[i][0];
-      const dc = directions[i][1];
+      const directionRow = directions[i][0];
+      const directionColumn = directions[i][1];
       let sequenceElements = [
         cell.element
       ];
@@ -294,35 +322,35 @@ class Game {
       let count = 1;
 
       // Get the cell neighbor in positive direction
-      let r = row.id + dr;
-      let c = cell.col + dc;
+      let rowOffset = row.id + directionRow;
+      let columnOffset = cell.col + directionColumn;
 
       while (
-        r >= 0 && r < rowCount &&
-        c >= 0 && c < colCount &&
-        this.board.rows[r].cells[c].element.getAttribute('data-value') === this.currentPlayer.type
+        rowOffset >= 0 && rowOffset < rowCount &&
+        columnOffset >= 0 && columnOffset < colCount &&
+        this.board.rows[rowOffset].cells[columnOffset].element.getAttribute('data-value') === this.currentPlayer.type
       ) {
         // increment sequence counter and cell offset
-        sequenceElements.push(this.board.rows[r].cells[c].element);
+        sequenceElements.push(this.board.rows[rowOffset].cells[columnOffset].element);
         count++;
-        r += dr;
-        c += dc;
+        rowOffset += directionRow;
+        columnOffset += directionColumn;
       }
 
       // Get the cell neighbor in negative direction
-      r = row.id - dr;
-      c = cell.col - dc;
+      rowOffset = row.id - directionRow;
+      columnOffset = cell.col - directionColumn;
 
       while (
-        r >= 0 && r < rowCount &&
-        c >= 0 && c < colCount &&
-        this.board.rows[r].cells[c].element.getAttribute('data-value') === this.currentPlayer.type
+        rowOffset >= 0 && rowOffset < rowCount &&
+        columnOffset >= 0 && columnOffset < colCount &&
+        this.board.rows[rowOffset].cells[columnOffset].element.getAttribute('data-value') === this.currentPlayer.type
       ) {
         // increment sequence counter and cell offset
-        sequenceElements.push(this.board.rows[r].cells[c].element);
+        sequenceElements.push(this.board.rows[rowOffset].cells[columnOffset].element);
         count++;
-        r -= dr;
-        c -= dc;
+        rowOffset -= directionRow;
+        columnOffset -= directionColumn;
       }
 
       // Sequence has reached win condition! We can break out the function
@@ -335,6 +363,13 @@ class Game {
     return false;
   }
 
+  /**
+   * Animates N amount of sequence elements equally over a fixed time period
+   * Divides the sequence elements in steps and increases the color saturation 
+   * 
+   * @param {Array} sequenceElements 
+   * @returns {void}
+   */
   animateSequence(sequenceElements) {
     const totalAnimationTime = 1500;
     const stepTime = totalAnimationTime / sequenceElements.length;
@@ -362,30 +397,25 @@ class Game {
   }
 
   /**
-   * Finishes the game by updating the score, displaying a message and starting a new game.
+   * Finishes the game by updating the score for a win or pulsing the board for a draw.
+   * Displays a message and locks the board by removing the cell event listeners
    * 
    * @param {boolean} draw 
    * @returns {void}
    */
   finishGame(draw = false) {
     const currentPlayerType = this.currentPlayer.type;
-    const msg = !draw ? `Player ${currentPlayerType} has won the game!` : `It's a draw!`;
+    const msg = !draw ? `Player ${currentPlayerType} has won the game!` : "It's a draw!";
 
-    if (!draw) {
-      this.app.score.addScore(currentPlayerType);
+    if (draw) {
+      this.board.pulseAllCells();
     }
     else {
-      const cells = document.getElementsByClassName('cell');
-
-      for (const el of cells) {
-        el.style.transition = "transition: border-color .4s ease;"
-        el.style.border = "1px solid #5b5b9c";
-        pulseElement(el);
-      }
+      this.app.score.addScore(currentPlayerType);
     }
 
     this.board.showPlayerMessage(msg);
-    this.board.boardElement.style.pointerEvents = "none";
+    this.removeEventListeners();
   }
 }
 
@@ -410,8 +440,8 @@ class Board {
    * 
    * @returns {number}
    */
-  getTotalCells() {
-    return this.rowCount * this.colCount;
+  getTotalCellCount() {
+    return Number(this.rowCount * this.colCount);
   }
 
   /**
@@ -420,7 +450,7 @@ class Board {
    * @returns {boolean}
    */
   allCellsHaveValue() {
-    const totalCells = this.getTotalCells();
+    const totalCells = this.getTotalCellCount();
     const filledCells = document.querySelectorAll('.cell[data-value]').length;
 
     if (filledCells >= totalCells) {
@@ -432,23 +462,26 @@ class Board {
 
   /**
    * Renders the board as HTML 
+   * Generates the HTML elements for the board rowCount and colCount
    * 
    * @returns {void}
    */
   render() {
-    // Generate board rows
+    // Initialize and add the board row and cells
     for (let i = 0; i < this.rowCount; i++) {
 
       const row = new Row(i);
       const htmlRow = row.generateHtml();
       this.boardElement.appendChild(htmlRow);
 
-      // Initialize row cols
-      for (let col = 0; col < this.colCount; col++) {
-        row.addCell()
+      // Initialize and add the row cells
+      for (let i = 0; i < this.colCount; i++) {
+        const cell = new Cell(row.id, i);
+        const htmlcell = cell.generateHtml();
+        row.cells.push(cell);
+        row.element.appendChild(htmlcell);
       }
 
-      row.generateCells();
       this.rows.push(row);
     }
   }
@@ -472,46 +505,40 @@ class Board {
     gameEl.appendChild(msgElement);
   }
 
+  /**
+   * Animates all the cell in a short pulsing animation
+   * 
+   * @returns {void}
+   */
+  pulseAllCells() {
+    const cells = document.getElementsByClassName('cell');
+
+    for (const el of cells) {
+      el.style.transition = "transition: border-color .4s ease;"
+      el.style.border = "1px solid #607D8B";
+      pulseElement(el);
+    }
+  }
+
 }
 
 class Row {
   constructor(id) {
     this.id = id;
-    this.cellCount = 0;
     this.cells = [];
+    this.element = null;
   }
 
   /**
-   * Generates the row's HTML element.
+   * Generates the row's HTML element and stores reference
    * 
    * @returns {HTMLDivElement} row
    */
   generateHtml() {
-    const row = document.createElement("div");
-    row.classList.add('row');
-    row.id = `row_${this.id}`;
-    return row;
-  }
-
-  /**
-   * Adds a new cell to the Row
-   * 
-   * @returns {void}
-   */
-  addCell() {
-    const cell = new Cell(this.id, this.cellCount++);
-    this.cells.push(cell);
-  }
-
-  /**
-   * Generates all the cells on the board
-   * 
-   * @returns {void}
-   */
-  generateCells() {
-    this.cells.forEach(cell => {
-      cell.generateHtml();
-    });
+    this.element = document.createElement("div");
+    this.element.classList.add('row');
+    this.element.id = `row_${this.id}`;
+    return this.element;
   }
 }
 
@@ -523,28 +550,28 @@ class Cell {
   }
 
   /**
-   * Generates the cell's HTML element.
+   * Generates the cell's HTML element and stores reference
    * 
-   * @returns {void}
+   * @returns {HTMLElement}
    */
   generateHtml() {
-    const row = document.getElementById(`row_${this.row}`);
     this.element = document.createElement("div");
     this.element.classList.add("cell");
     this.element.id = `cell_${this.col}`;
     this.element.dataset.row = this.row;
     this.element.dataset.col = this.col;
     this.element.textContent = "";
-    row.appendChild(this.element);
+
+    return this.element;
   }
 
   /**
-   * Sets the parameter to the cell's value
-   * Waits for 2 frames before resolving the promise, to avoid logic finishing before paint.
-   * Rejects or resolves the promise based on whether the element has value.
+   * Sets the parameter to the cell's value and removes its boundClickHandler
+   * Throws if the cell already has a value
    * 
-   * @param {string} value 
-   * @returns {Promise}
+   * @param {string} value
+   * @throws {Error} 
+   * @returns {void}
    */
   setValue(value) {
     if (
@@ -552,21 +579,28 @@ class Cell {
       this.element.classList.contains('x') ||
       this.element.hasAttribute('data-value')
     ) {
-      alert('Cell already has value!')
+      throw new Error('Cell already has value!');
     }
 
     this.element.dataset.value = value;
     this.element.classList.add(value);
     this.element.style.pointerEvents = "none";
+    this.element.removeEventListener('click', this.boundClickHandler);
   }
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-  // Initialize the app
+  // Initialize the app and start a new game
   const ticTacToe = new TicTacToe();
   ticTacToe.newGame();
 });
 
+/**
+ * Animates the element by manipulating its scale for a duration
+ * 
+ * @param {HTMLElement} el 
+ * @returns {void}
+ */
 function pulseElement(el) {
   return el.animate(
     [
@@ -575,7 +609,7 @@ function pulseElement(el) {
       { transform: "scale(1)" }
     ],
     {
-      duration: 300,
+      duration: 400,
       easing: "ease"
     }
   ).finished;
